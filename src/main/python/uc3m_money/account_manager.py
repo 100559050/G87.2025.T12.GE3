@@ -1,4 +1,5 @@
 """Account manager module """
+import os.path
 import re
 import json
 from datetime import datetime, timezone
