@@ -18,7 +18,7 @@ class AccountManager:
         pass
 
     @staticmethod
-    def valivan(ic: str):
+    def validate_iban(ic: str):
         """
     Calcula el dígito de control de un IBAN español.
 
@@ -112,8 +112,8 @@ class AccountManager:
                          amount: float)->str:
         """first method: receives transfer info and
         stores it into a file"""
-        self.valivan(from_iban)
-        self.valivan(to_iban)
+        self.validate_iban(from_iban)
+        self.validate_iban(to_iban)
         self.validate_concept(concept)
         mr = re.compile(r"(ORDINARY|INMEDIATE|URGENT)")
         res = mr.fullmatch(transfer_type)
@@ -191,7 +191,7 @@ class AccountManager:
             raise AccountManagementException("Error - Invalid Key in JSON") from e
 
 
-        deposit_iban = self.valivan(deposit_iban)
+        deposit_iban = self.validate_iban(deposit_iban)
         myregex = re.compile(r"^EUR [0-9]{4}\.[0-9]{2}")
         res = myregex.fullmatch(deposit_amount)
         if not res:
@@ -240,7 +240,7 @@ class AccountManager:
 
     def calculate_balance(self, iban:str)->bool:
         """calculate the balance for a given iban"""
-        iban = self.valivan(iban)
+        iban = self.validate_iban(iban)
         t_l = self.read_transactions_file()
         iban_found = False
         bal_s = 0
