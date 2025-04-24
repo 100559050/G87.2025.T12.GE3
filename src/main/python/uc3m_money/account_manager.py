@@ -65,20 +65,20 @@ class AccountManager(metaclass=SingletonMeta):
         if not re.fullmatch(pattern, concept):
             raise AccountManagementException("Invalid concept format")
 
-    def validate_transfer_date(self, t_d):
+    def validate_transfer_date(self, date_str):
         """Validates the arrival date format using regex."""
-        mr = re.compile(r"^(([0-2]\d|3[0-1])\/(0\d|1[0-2])\/\d\d\d\d)$")
-        if not mr.fullmatch(t_d):
+        iban_pattern = re.compile(r"^(([0-2]\d|3[0-1])\/(0\d|1[0-2])\/\d\d\d\d)$")
+        if not iban_pattern.fullmatch(date_str):
             raise AccountManagementException("Invalid date format")
         try:
-            my_date = datetime.strptime(t_d, "%d/%m/%Y").date()
+            transfer_date = datetime.strptime(date_str, "%d/%m/%Y").date()
         except ValueError as ex:
             raise AccountManagementException("Invalid date format") from ex
-        if my_date < datetime.now(timezone.utc).date():
+        if transfer_date < datetime.now(timezone.utc).date():
             raise AccountManagementException("Transfer date must be today or later.")
-        if my_date.year < 2025 or my_date.year > 2050:
+        if transfer_date.year < 2025 or transfer_date.year > 2050:
             raise AccountManagementException("Invalid date format")
-        return t_d
+        return date_str
 
     def validate_transfer_details(self, concept, transfer_type, date, amount):
         """Validates transfer concept, type, date, and amount."""
