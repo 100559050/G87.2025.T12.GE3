@@ -16,7 +16,7 @@ from uc3m_money.singleton_meta import SingletonMeta
 
 
 class AccountManager(metaclass=SingletonMeta):
-    """Class for providing the methods for managing the orders"""
+    """Class for transfers, deposits, and balances"""
     def __init__(self):
         pass
 
@@ -142,16 +142,18 @@ class AccountManager(metaclass=SingletonMeta):
 
         return transfer.transfer_code
 
-    def deposit_into_account(self, file_path: str) -> str:
-        """Manages deposits received for accounts."""
+    def _load_json_strict(self, file_path: str):
+        """Load JSON from file, raising exceptions if file not found or invalid JSON."""
         if not os.path.isfile(file_path):
             raise AccountManagementException("Error: file input not found")
         try:
             with open(file_path, "r", encoding="utf-8", newline="") as file:
-                deposit_data = json.load(file)
+                return json.load(file)
         except json.JSONDecodeError as ex:
             raise AccountManagementException("JSON Decode Error - Wrong JSON Format") from ex
 
+    def _validate_deposit_payload(self, deposit_data: dict) -> tuple[str, float]:
+        """Validate deposit data and return validated IBAN and amount."""
         try:
             deposit_iban = deposit_data["IBAN"]
             deposit_amount = deposit_data["AMOUNT"]
@@ -166,18 +168,32 @@ class AccountManager(metaclass=SingletonMeta):
         if deposit_amount_float == 0:
             raise AccountManagementException("Error - Deposit must be greater than 0")
 
-        deposit_obj = AccountDeposit(to_iban=deposit_iban, deposit_amount=deposit_amount_float)
-        self.append_record(DEPOSITS_STORE_FILE, deposit_obj.to_json())
+        return deposit_iban, deposit_amount_float
 
+    def _create_deposit(self, iban: str, amount: float) -> AccountDeposit:
+        """Create an AccountDeposit object with validated data."""
+        return AccountDeposit(to_iban=iban, deposit_amount=amount)
+
+    def _persist_deposit(self, deposit_obj: AccountDeposit) -> str:
+        """Persist the deposit and return its signature."""
+        self.append_record(DEPOSITS_STORE_FILE, deposit_obj.to_json())
         return deposit_obj.deposit_signature
 
-    def calculate_balance(self, iban: str) -> bool:
-        """Calculate the balance for a given IBAN."""
-        iban = self.validate_iban(iban)
+    def deposit_into_account(self, file_path: str) -> str:
+        """Manages deposits received for accounts."""
+        deposit_data = self._load_json_strict(file_path)
+        deposit_iban, deposit_amount = self._validate_deposit_payload(deposit_data)
+        deposit_obj = self._create_deposit(deposit_iban, deposit_amount)
+        return self._persist_deposit(deposit_obj)
+
+    def _load_transactions(self) -> list:
+        """Load transactions from file, ensuring file exists."""
         if not os.path.isfile(TRANSACTIONS_STORE_FILE):
             raise AccountManagementException("Wrong file  or file path")
-        transactions = self.load_json_or_empty(TRANSACTIONS_STORE_FILE)
+        return self.load_json_or_empty(TRANSACTIONS_STORE_FILE)
 
+    def _calculate_iban_balance(self, iban: str, transactions: list) -> float:
+        """Calculate balance for given IBAN from transactions."""
         iban_found = False
         balance = 0.0
         for transaction in transactions:
@@ -188,12 +204,21 @@ class AccountManager(metaclass=SingletonMeta):
         if not iban_found:
             raise AccountManagementException("IBAN not found")
 
+        return balance
+
+    def _persist_balance(self, iban: str, balance: float) -> None:
+        """Save the calculated balance to the balances file."""
         last_balance = {
             "IBAN": iban,
             "time": datetime.timestamp(datetime.now(timezone.utc)),
             "BALANCE": balance
         }
-
         self.append_record(BALANCES_STORE_FILE, last_balance)
 
+    def calculate_balance(self, iban: str) -> bool:
+        """Calculate the balance for a given IBAN."""
+        iban = self.validate_iban(iban)
+        transactions = self._load_transactions()
+        balance = self._calculate_iban_balance(iban, transactions)
+        self._persist_balance(iban, balance)
         return True
