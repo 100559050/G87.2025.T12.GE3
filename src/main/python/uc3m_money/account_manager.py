@@ -20,13 +20,13 @@ class AccountManager:
     @staticmethod
     def validate_iban(ic: str):
         """
-    Calcula el dígito de control de un IBAN español.
+        Validates the control digit of a Spanish IBAN.
 
-    Args:
-        ic (str): El IBAN sin los dos últimos dígitos (dígito de control).
+        Args:
+            ic (str): The IBAN to validate.
 
-    Returns:
-        str: El dígito de control calculado.
+        Returns:
+            str: The same IBAN if valid.
         """
         mr = re.compile(r"^ES[0-9]{22}")
         result_expression = mr.fullmatch(ic)
@@ -34,12 +34,9 @@ class AccountManager:
             raise AccountManagementException("Invalid IBAN format")
         iban = ic
         original_code = iban[2:4]
-        #replacing the control
         iban = iban[:2] + "00" + iban[4:]
         iban = iban[4:] + iban[:4]
 
-
-        # Convertir el IBAN en una cadena numérica, reemplazando letras por números
         iban = (iban.replace('A', '10').replace('B', '11').
                 replace('C', '12').replace('D', '13').replace('E', '14').
                 replace('F', '15'))
@@ -53,27 +50,17 @@ class AccountManager:
                 replace('V', '31').replace('W', '32').replace('X', '33'))
         iban = iban.replace('Y', '34').replace('Z', '35')
 
-        # Mover los cuatro primeros caracteres al final
-
-        # Convertir la cadena en un número entero
         int_i = int(iban)
-
-        # Calcular el módulo 97
         mod = int_i % 97
-
-        # Calcular el dígito de control (97 menos el módulo)
         dc = 98 - mod
 
         if int(original_code) != dc:
-            #print(dc)
             raise AccountManagementException("Invalid IBAN control digit")
 
         return ic
 
     def validate_concept(self, concept: str):
-        """regular expression for checking the minimum and maximum length as well as
-        the allowed characters and spaces restrictions
-        there are other ways to check this"""
+        """Validates the concept string for correct format and length."""
         myregex = re.compile(r"^(?=^.{10,30}$)([a-zA-Z]+(\s[a-zA-Z]+)+)$")
         res = self.check_regular(r"^(?=^.{10,30}$)([a-zA-Z]+(\s[a-zA-Z]+)+)$", concept)
         res = myregex.fullmatch(concept)
@@ -86,7 +73,7 @@ class AccountManager:
         return res
 
     def validate_transfer_date(self, t_d):
-        """validates the arrival date format  using regex"""
+        """Validates the arrival date format using regex."""
         mr = re.compile(r"^(([0-2]\d|3[0-1])\/(0\d|1[0-2])\/\d\d\d\d)$")
         res = mr.fullmatch(t_d)
         if not res:
@@ -103,46 +90,48 @@ class AccountManager:
         if my_date.year < 2025 or my_date.year > 2050:
             raise AccountManagementException("Invalid date format")
         return t_d
-    #pylint: disable=too-many-arguments
+
+    def validate_transfer_details(self, concept, transfer_type, date, amount):
+        """Validates transfer concept, type, date, and amount."""
+        self.validate_concept(concept)
+
+        type_pattern = re.compile(r"(ORDINARY|INMEDIATE|URGENT)")
+        if not type_pattern.fullmatch(transfer_type):
+            raise AccountManagementException("Invalid transfer type")
+
+        self.validate_transfer_date(date)
+
+        try:
+            f_amount = float(amount)
+        except ValueError as exc:
+            raise AccountManagementException("Invalid transfer amount") from exc
+
+        amount_str = str(f_amount)
+        if '.' in amount_str and len(amount_str.split('.')[1]) > 2:
+            raise AccountManagementException("Invalid transfer amount")
+
+        if f_amount < 10 or f_amount > 10000:
+            raise AccountManagementException("Invalid transfer amount")
+
+        return f_amount
+
     def transfer_request(self, from_iban: str,
                          to_iban: str,
                          concept: str,
                          transfer_type: str,
                          date: str,
-                         amount: float)->str:
-        """first method: receives transfer info and
-        stores it into a file"""
+                         amount: float) -> str:
+        """Receives transfer info and stores it into a file."""
         self.validate_iban(from_iban)
         self.validate_iban(to_iban)
-        self.validate_concept(concept)
-        mr = re.compile(r"(ORDINARY|INMEDIATE|URGENT)")
-        res = mr.fullmatch(transfer_type)
-        if not res:
-            raise AccountManagementException("Invalid transfer type")
-        self.validate_transfer_date(date)
-
-
-
-        try:
-            f_amount  = float(amount)
-        except ValueError as exc:
-            raise AccountManagementException("Invalid transfer amount") from exc
-
-        n_str = str(f_amount)
-        if '.' in n_str:
-            decimales = len(n_str.split('.')[1])
-            if decimales > 2:
-                raise AccountManagementException("Invalid transfer amount")
-
-        if f_amount < 10 or f_amount > 10000:
-            raise AccountManagementException("Invalid transfer amount")
+        validated_amount = self.validate_transfer_details(concept, transfer_type, date, amount)
 
         my_request = TransferRequest(from_iban=from_iban,
                                      to_iban=to_iban,
                                      transfer_concept=concept,
                                      transfer_type=transfer_type,
                                      transfer_date=date,
-                                     transfer_amount=amount)
+                                     transfer_amount=validated_amount)
 
         try:
             with open(TRANSFERS_STORE_FILE, "r", encoding="utf-8", newline="") as file:
