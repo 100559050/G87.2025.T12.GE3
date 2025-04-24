@@ -5,19 +5,20 @@ import json
 from datetime import datetime, timezone
 from uc3m_money.account_management_exception import AccountManagementException
 from uc3m_money.account_management_config import (
-    DEPOSITS_STORE_FILE,
     TRANSACTIONS_STORE_FILE,
     BALANCES_STORE_FILE
 )
-from uc3m_money.account_deposit import AccountDeposit
 from uc3m_money.singleton_meta import SingletonMeta
 from uc3m_money.transfer_manager import TransferManager
+from uc3m_money.deposit_manager import DepositManager
 
 
 class AccountManager(metaclass=SingletonMeta):
     """Class for providing the methods for managing the orders"""
+
     def __init__(self):
         self._transfer = TransferManager()
+        self._deposit = DepositManager()
 
     def load_json_or_empty(self, file_path: str):
         """Load JSON list from file or return empty list if missing."""
@@ -61,49 +62,9 @@ class AccountManager(metaclass=SingletonMeta):
             amount=amount
         )
 
-    def _validate_deposit_payload(self, deposit_data: dict) -> tuple[str, float]:
-        """Validate deposit data and return validated IBAN and amount."""
-        try:
-            deposit_iban = deposit_data["IBAN"]
-            deposit_amount = deposit_data["AMOUNT"]
-        except KeyError as e:
-            raise AccountManagementException("Error - Invalid Key in JSON") from e
-
-        deposit_iban = self._transfer.validate_iban(deposit_iban)
-        if not re.fullmatch(r"^EUR [0-9]{4}\.[0-9]{2}", deposit_amount):
-            raise AccountManagementException("Error - Invalid deposit amount")
-
-        deposit_amount_float = float(deposit_amount[4:])
-        if deposit_amount_float == 0:
-            raise AccountManagementException("Error - Deposit must be greater than 0")
-
-        return deposit_iban, deposit_amount_float
-
-    def _create_deposit(self, iban: str, amount: float) -> AccountDeposit:
-        """Create an AccountDeposit object with validated data."""
-        return AccountDeposit(to_iban=iban, deposit_amount=amount)
-
-    def _persist_deposit(self, deposit_obj: AccountDeposit) -> str:
-        """Persist the deposit and return its signature."""
-        self.append_record(DEPOSITS_STORE_FILE, deposit_obj.to_json())
-        return deposit_obj.deposit_signature
-
     def deposit_into_account(self, file_path: str) -> str:
-        """Manages deposits received for accounts."""
-        deposit_data = self._load_json_strict(file_path)
-        deposit_iban, deposit_amount = self._validate_deposit_payload(deposit_data)
-        deposit_obj = self._create_deposit(deposit_iban, deposit_amount)
-        return self._persist_deposit(deposit_obj)
-
-    def _load_json_strict(self, file_path: str):
-        """Load JSON from file, raising exceptions if file not found or invalid JSON."""
-        if not os.path.isfile(file_path):
-            raise AccountManagementException("Error: file input not found")
-        try:
-            with open(file_path, "r", encoding="utf-8", newline="") as file:
-                return json.load(file)
-        except json.JSONDecodeError as ex:
-            raise AccountManagementException("JSON Decode Error - Wrong JSON Format") from ex
+        """Delegates deposit operation to DepositManager."""
+        return self._deposit.deposit(file_path)
 
     def _load_transactions(self) -> list:
         """Load transactions from file, ensuring file exists."""
