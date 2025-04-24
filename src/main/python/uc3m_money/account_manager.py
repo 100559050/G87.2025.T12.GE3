@@ -65,7 +65,7 @@ class AccountManager:
         res = self.check_regular(r"^(?=^.{10,30}$)([a-zA-Z]+(\s[a-zA-Z]+)+)$", concept)
         res = myregex.fullmatch(concept)
         if not res:
-            raise AccountManagementException ("Invalid concept format")
+            raise AccountManagementException("Invalid concept format")
 
     def check_regular(self, pattern, value):
         myregex = re.compile(pattern)
@@ -115,6 +115,18 @@ class AccountManager:
 
         return f_amount
 
+    def is_duplicate_transfer(self, transfer_list, request):
+        """Check if the transfer is already in the list."""
+        for t_i in transfer_list:
+            if (t_i["from_iban"] == request.from_iban and
+                t_i["to_iban"] == request.to_iban and
+                t_i["transfer_date"] == request.transfer_date and
+                t_i["transfer_amount"] == request.transfer_amount and
+                t_i["transfer_concept"] == request.transfer_concept and
+                t_i["transfer_type"] == request.transfer_type):
+                return True
+        return False
+
     def transfer_request(self, from_iban: str,
                          to_iban: str,
                          concept: str,
@@ -141,14 +153,8 @@ class AccountManager:
         except json.JSONDecodeError as ex:
             raise AccountManagementException("JSON Decode Error - Wrong JSON Format") from ex
 
-        for t_i in t_l:
-            if (t_i["from_iban"] == my_request.from_iban and
-                    t_i["to_iban"] == my_request.to_iban and
-                    t_i["transfer_date"] == my_request.transfer_date and
-                    t_i["transfer_amount"] == my_request.transfer_amount and
-                    t_i["transfer_concept"] == my_request.transfer_concept and
-                    t_i["transfer_type"] == my_request.transfer_type):
-                raise AccountManagementException("Duplicated transfer in transfer list")
+        if self.is_duplicate_transfer(t_l, my_request):
+            raise AccountManagementException("Duplicated transfer in transfer list")
 
         t_l.append(my_request.to_json())
 
