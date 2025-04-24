@@ -122,9 +122,9 @@ class AccountManager(metaclass=SingletonMeta):
 
         my_request = TransferRequest(
             from_iban=from_iban,
+            transfer_type=transfer_type,
             to_iban=to_iban,
             transfer_concept=concept,
-            transfer_type=transfer_type,
             transfer_date=date,
             transfer_amount=validated_amount
         )
@@ -171,7 +171,13 @@ class AccountManager(metaclass=SingletonMeta):
     def calculate_balance(self, iban: str) -> bool:
         """Calculate the balance for a given IBAN."""
         iban = self.validate_iban(iban)
-        transactions = self.read_json_file(TRANSACTIONS_STORE_FILE)
+        try:
+            with open(TRANSACTIONS_STORE_FILE, "r", encoding="utf-8", newline="") as file:
+                transactions = json.load(file)
+        except FileNotFoundError as ex:
+            raise AccountManagementException("Wrong file  or file path") from ex
+        except json.JSONDecodeError as ex:
+            raise AccountManagementException("JSON Decode Error - Wrong JSON Format") from ex
 
         iban_found = False
         balance = 0.0

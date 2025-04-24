@@ -35,13 +35,16 @@ class AccountDeposit:
     def deposit_date(self) -> float:
         return self.__deposit_date
 
+    def __signature_string(self) -> str:
+        """Composes the string to be used for generating the signature"""
+        return "{alg:" + str(self.__alg) + ",typ:" + str(self.__type) + ",iban:" + \
+               str(self.__to_iban) + ",amount:" + str(self.__deposit_amount) + \
+               ",deposit_date:" + str(self.__deposit_date) + "}"
+
     @property
     def deposit_signature(self) -> str:
-        """
-        Generates a SHA-256 hash to uniquely identify the deposit.
-        """
-        signature_string = f"{self.to_iban}{self.deposit_amount}{self.deposit_date}"
-        return hashlib.sha256(signature_string.encode()).hexdigest()
+        """Returns the SHA-256 signature"""
+        return hashlib.sha256(self.__signature_string().encode()).hexdigest()
 
     def to_json(self) -> dict:
         """
