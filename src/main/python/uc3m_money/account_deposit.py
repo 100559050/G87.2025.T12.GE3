@@ -1,76 +1,62 @@
-"""Transfer request module"""
-import hashlib
+"""Contains the class OrderShipping"""
 from datetime import datetime, timezone
+import hashlib
 
+class AccountDeposit():
+    """Class representing the information required for shipping of an order"""
 
-class TransferRequest:
-    """
-    Represents a request to transfer money between two IBAN accounts.
-    Stores key transfer details, timestamp, and supports serialization.
-    """
-    def __init__(self, from_iban: str, to_iban: str, transfer_concept: str,
-                 transfer_type: str, transfer_date: str, transfer_amount: float):
-        self.__from_iban = from_iban
+    def __init__(self,
+                 to_iban: str,
+                 deposit_amount: float):
+        self.__alg = "SHA-256"
+        self.__type = "DEPOSIT"
         self.__to_iban = to_iban
-        self.__transfer_concept = transfer_concept
-        self.__transfer_type = transfer_type
-        self.__transfer_date = transfer_date
-        self.__transfer_amount = transfer_amount
-        self.__time_stamp = datetime.timestamp(datetime.now(timezone.utc))
+        self.__deposit_amount = deposit_amount
+        justnow = datetime.now(timezone.utc)
+        self.__deposit_date = datetime.timestamp(justnow)
 
-    @property
-    def from_iban(self):
-        return self.__from_iban
+    def to_json(self):
+        """returns the object data in json format"""
+        return {"alg": self.__alg,
+                "type": self.__type,
+                "to_iban": self.__to_iban,
+                "deposit_amount": self.__deposit_amount,
+                "deposit_date": self.__deposit_date,
+                "deposit_signature": self.deposit_signature}
+
+    def __signature_string(self):
+        """Composes the string to be used for generating the key for the date"""
+        return "{alg:" + str(self.__alg) +",typ:" + str(self.__type) +",iban:" + \
+               str(self.__to_iban) + ",amount:" + str(self.__deposit_amount) + \
+               ",deposit_date:" + str(self.__deposit_date) + "}"
 
     @property
     def to_iban(self):
+        """Property that represents the product_id of the patient"""
         return self.__to_iban
 
-    @property
-    def transfer_concept(self):
-        return self.__transfer_concept
+    @to_iban.setter
+    def to_iban(self, value):
+        self.__to_iban = value
 
     @property
-    def transfer_type(self):
-        return self.__transfer_type
+    def deposit_amount(self):
+        """Property that represents the order_id"""
+        return self.__deposit_amount
+    @deposit_amount.setter
+    def deposit_amount(self, value):
+        self.__deposit_amount = value
 
     @property
-    def transfer_date(self):
-        return self.__transfer_date
+    def deposit_date(self):
+        """Property that represents the phone number of the client"""
+        return self.__deposit_date
+    @deposit_date.setter
+    def deposit_date( self, value ):
+        self.__deposit_date = value
+
 
     @property
-    def transfer_amount(self):
-        return self.__transfer_amount
-
-    @property
-    def time_stamp(self):
-        return self.__time_stamp
-
-    @property
-    def transfer_code(self) -> str:
-        """
-        Generates a unique transfer code using a hash of the IBANs, timestamp, and amount.
-        """
-        transfer_string = f"{self.from_iban}{self.to_iban}{self.time_stamp}{self.transfer_amount}"
-        return hashlib.md5(transfer_string.encode()).hexdigest()
-
-    def to_json(self) -> dict:
-        """
-        Serializes the transfer request into a dictionary suitable for JSON storage.
-        """
-        return {
-            "from_iban": self.from_iban,
-            "to_iban": self.to_iban,
-            "transfer_concept": self.transfer_concept,
-            "transfer_type": self.transfer_type,
-            "transfer_date": self.transfer_date,
-            "transfer_amount": self.transfer_amount,
-            "time_stamp": self.time_stamp,
-            "transfer_code": self.transfer_code
-        }
-
-    def __str__(self) -> str:
-        return (
-            f"Transfer from {self.from_iban} to {self.to_iban} of {self.transfer_amount} "
-            f"on {self.transfer_date} [{self.transfer_type}] - Concept: {self.transfer_concept}"
-        )
+    def deposit_signature( self ):
+        """Returns the sha256 signature of the date"""
+        return hashlib.sha256(self.__signature_string().encode()).hexdigest()
