@@ -29,8 +29,8 @@ class AccountManager:
         str: El dígito de control calculado.
         """
         mr = re.compile(r"^ES[0-9]{22}")
-        res = mr.fullmatch(ic)
-        if not res:
+        result_expression = mr.fullmatch(ic)
+        if not result_expression:
             raise AccountManagementException("Invalid IBAN format")
         iban = ic
         original_code = iban[2:4]
@@ -75,10 +75,15 @@ class AccountManager:
         the allowed characters and spaces restrictions
         there are other ways to check this"""
         myregex = re.compile(r"^(?=^.{10,30}$)([a-zA-Z]+(\s[a-zA-Z]+)+)$")
-
+        res = self.check_regular(r"^(?=^.{10,30}$)([a-zA-Z]+(\s[a-zA-Z]+)+)$", concept)
         res = myregex.fullmatch(concept)
         if not res:
             raise AccountManagementException ("Invalid concept format")
+
+    def check_regular(self, pattern, value):
+        myregex = re.compile(pattern)
+        res = myregex.fullmatch(value)
+        return res
 
     def validate_transfer_date(self, t_d):
         """validates the arrival date format  using regex"""
