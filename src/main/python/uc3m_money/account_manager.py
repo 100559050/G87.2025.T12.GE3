@@ -10,9 +10,12 @@ from uc3m_money.account_management_config import (TRANSFERS_STORE_FILE,
 
 from uc3m_money.transfer_request import TransferRequest
 from uc3m_money.account_deposit import AccountDeposit
+from uc3m_money.singleton_meta import SingletonMeta
 
 
-class AccountManager:
+
+
+class AccountManager(metaclass=SingletonMeta):
     """Class for providing the methods for managing the orders"""
     def __init__(self):
         pass
