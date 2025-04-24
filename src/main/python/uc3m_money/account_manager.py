@@ -140,15 +140,15 @@ class AccountManager(metaclass=SingletonMeta):
         """Manages deposits received for accounts."""
         try:
             with open(input_file, "r", encoding="utf-8", newline="") as file:
-                i_d = json.load(file)
+                deposit_data = json.load(file)
         except FileNotFoundError as ex:
             raise AccountManagementException("Error: file input not found") from ex
         except json.JSONDecodeError as ex:
             raise AccountManagementException("JSON Decode Error - Wrong JSON Format") from ex
 
         try:
-            deposit_iban = i_d["IBAN"]
-            deposit_amount = i_d["AMOUNT"]
+            deposit_iban = deposit_data["IBAN"]
+            deposit_amount = deposit_data["AMOUNT"]
         except KeyError as e:
             raise AccountManagementException("Error - Invalid Key in JSON") from e
 
@@ -156,11 +156,11 @@ class AccountManager(metaclass=SingletonMeta):
         if not re.fullmatch(r"^EUR [0-9]{4}\.[0-9]{2}", deposit_amount):
             raise AccountManagementException("Error - Invalid deposit amount")
 
-        d_a_f = float(deposit_amount[4:])
-        if d_a_f == 0:
+        deposit_amount_float = float(deposit_amount[4:])
+        if deposit_amount_float == 0:
             raise AccountManagementException("Error - Deposit must be greater than 0")
 
-        deposit_obj = AccountDeposit(to_iban=deposit_iban, deposit_amount=d_a_f)
+        deposit_obj = AccountDeposit(to_iban=deposit_iban, deposit_amount=deposit_amount_float)
         deposit_list = self.read_json_file(DEPOSITS_STORE_FILE)
         deposit_list.append(deposit_obj.to_json())
         self.write_json_file(DEPOSITS_STORE_FILE, deposit_list)
