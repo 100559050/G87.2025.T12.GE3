@@ -88,14 +88,14 @@ class AccountManager(metaclass=SingletonMeta):
             raise AccountManagementException("Invalid transfer type")
         self.validate_transfer_date(date)
         try:
-            f_amount = float(amount)
+            amount = float(amount)
         except ValueError as exc:
             raise AccountManagementException("Invalid transfer amount") from exc
-        if '.' in str(f_amount) and len(str(f_amount).split('.')[1]) > 2:
+        if '.' in str(amount) and len(str(amount).split('.')[1]) > 2:
             raise AccountManagementException("Invalid transfer amount")
-        if f_amount < 10 or f_amount > 10000:
+        if amount < 10 or amount > 10000:
             raise AccountManagementException("Invalid transfer amount")
-        return f_amount
+        return amount
 
     def is_duplicate_transfer(self, transfer_list, request):
         """Check if the transfer is already in the list."""
@@ -120,7 +120,7 @@ class AccountManager(metaclass=SingletonMeta):
         self.validate_iban(to_iban)
         validated_amount = self.validate_transfer_details(concept, transfer_type, date, amount)
 
-        my_request = TransferRequest(
+        transfer = TransferRequest(
             from_iban=from_iban,
             transfer_type=transfer_type,
             to_iban=to_iban,
@@ -130,37 +130,41 @@ class AccountManager(metaclass=SingletonMeta):
         )
 
         transfer_list = self.read_json_file(TRANSFERS_STORE_FILE)
-        if self.is_duplicate_transfer(transfer_list, my_request):
+        if self.is_duplicate_transfer(transfer_list, transfer):
             raise AccountManagementException("Duplicated transfer in transfer list")
-        transfer_list.append(my_request.to_json())
+        transfer_list.append(transfer.to_json())
         self.write_json_file(TRANSFERS_STORE_FILE, transfer_list)
 
-        return my_request.transfer_code
+        return transfer.transfer_code
 
-    def deposit_into_account(self, input_file: str) -> str:
+    def _validate_deposit_amount(self, amount_str: str) -> float:
+        """Validates deposit amount format and returns the float value."""
+        if not re.fullmatch(r"^EUR [0-9]{4}\.[0-9]{2}", amount_str):
+            raise AccountManagementException("Error - Invalid deposit amount")
+        amount = float(amount_str[4:])
+        if amount == 0:
+            raise AccountManagementException("Error - Deposit must be greater than 0")
+        return amount
+
+    def deposit_into_account(self, file_path: str) -> str:
         """Manages deposits received for accounts."""
-        try:
-            with open(input_file, "r", encoding="utf-8", newline="") as file:
-                deposit_data = json.load(file)
-        except FileNotFoundError as ex:
-            raise AccountManagementException("Error: file input not found") from ex
-        except json.JSONDecodeError as ex:
-            raise AccountManagementException("JSON Decode Error - Wrong JSON Format") from ex
+        # Read and validate input file
+        if not os.path.isfile(file_path):
+            raise AccountManagementException("Error: file input not found")
+        deposit_data = self.read_json_file(file_path)
 
+        # Extract and validate required fields
         try:
             deposit_iban = deposit_data["IBAN"]
             deposit_amount = deposit_data["AMOUNT"]
-        except KeyError as e:
+        except (KeyError, TypeError) as e:
             raise AccountManagementException("Error - Invalid Key in JSON") from e
 
+        # Validate IBAN and amount
         deposit_iban = self.validate_iban(deposit_iban)
-        if not re.fullmatch(r"^EUR [0-9]{4}\.[0-9]{2}", deposit_amount):
-            raise AccountManagementException("Error - Invalid deposit amount")
+        deposit_amount_float = self._validate_deposit_amount(deposit_amount)
 
-        deposit_amount_float = float(deposit_amount[4:])
-        if deposit_amount_float == 0:
-            raise AccountManagementException("Error - Deposit must be greater than 0")
-
+        # Create and store deposit
         deposit_obj = AccountDeposit(to_iban=deposit_iban, deposit_amount=deposit_amount_float)
         deposit_list = self.read_json_file(DEPOSITS_STORE_FILE)
         deposit_list.append(deposit_obj.to_json())
@@ -171,13 +175,9 @@ class AccountManager(metaclass=SingletonMeta):
     def calculate_balance(self, iban: str) -> bool:
         """Calculate the balance for a given IBAN."""
         iban = self.validate_iban(iban)
-        try:
-            with open(TRANSACTIONS_STORE_FILE, "r", encoding="utf-8", newline="") as file:
-                transactions = json.load(file)
-        except FileNotFoundError as ex:
-            raise AccountManagementException("Wrong file  or file path") from ex
-        except json.JSONDecodeError as ex:
-            raise AccountManagementException("JSON Decode Error - Wrong JSON Format") from ex
+        if not os.path.isfile(TRANSACTIONS_STORE_FILE):
+            raise AccountManagementException("Wrong file  or file path")
+        transactions = self.read_json_file(TRANSACTIONS_STORE_FILE)
 
         iban_found = False
         balance = 0.0
