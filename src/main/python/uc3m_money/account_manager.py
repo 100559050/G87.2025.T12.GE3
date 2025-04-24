@@ -98,13 +98,13 @@ class AccountManager(metaclass=SingletonMeta):
 
     def is_duplicate_transfer(self, transfer_list, request):
         """Check if the transfer is already in the list."""
-        for t_i in transfer_list:
-            if (t_i["from_iban"] == request.from_iban and
-                t_i["to_iban"] == request.to_iban and
-                t_i["transfer_date"] == request.transfer_date and
-                t_i["transfer_amount"] == request.transfer_amount and
-                t_i["transfer_concept"] == request.transfer_concept and
-                t_i["transfer_type"] == request.transfer_type):
+        for existing in transfer_list:
+            if (existing["from_iban"] == request.from_iban and
+                existing["to_iban"] == request.to_iban and
+                existing["transfer_date"] == request.transfer_date and
+                existing["transfer_amount"] == request.transfer_amount and
+                existing["transfer_concept"] == request.transfer_concept and
+                existing["transfer_type"] == request.transfer_type):
                 return True
         return False
 
