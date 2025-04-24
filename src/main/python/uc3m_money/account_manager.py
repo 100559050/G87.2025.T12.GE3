@@ -40,24 +40,24 @@ class AccountManager(metaclass=SingletonMeta):
             raise AccountManagementException("JSON Decode Error - Wrong JSON Format") from ex
 
     @staticmethod
-    def validate_iban(ic: str):
+    def validate_iban(iban_str: str):
         """Validates the control digit of a Spanish IBAN."""
-        mr = re.compile(r"^ES[0-9]{22}")
-        result_expression = mr.fullmatch(ic)
+        iban_pattern = re.compile(r"^ES[0-9]{22}")
+        result_expression = iban_pattern.fullmatch(iban_str)
         if not result_expression:
             raise AccountManagementException("Invalid IBAN format")
-        iban = ic
+        iban = iban_str
         original_code = iban[2:4]
         iban = iban[:2] + "00" + iban[4:]
         iban = iban[4:] + iban[:4]
         for char, value in zip("ABCDEFGHIJKLMNOPQRSTUVWXYZ", range(10, 36)):
             iban = iban.replace(char, str(value))
-        int_i = int(iban)
-        mod = int_i % 97
-        dc = 98 - mod
-        if int(original_code) != dc:
+        numeric_iban = int(iban)
+        remainder = numeric_iban % 97
+        computed_dc = 98 - remainder
+        if int(original_code) != computed_dc:
             raise AccountManagementException("Invalid IBAN control digit")
-        return ic
+        return iban_str
 
     def validate_concept(self, concept: str):
         """Validates the concept string for correct format and length."""
