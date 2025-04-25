@@ -2,7 +2,6 @@
 from datetime import datetime, timezone
 import hashlib
 
-
 class AccountDeposit:
     """
     Class representing a deposit into an account.
@@ -17,12 +16,12 @@ class AccountDeposit:
         self.__deposit_date = datetime.timestamp(datetime.now(timezone.utc))
 
     @property
-    def alg(self) -> str:
+    def algorithm(self) -> str:
         """Returns the algorithm used for signature generation."""
         return self.__algorithm
 
     @property
-    def type(self) -> str:
+    def transaction_type(self) -> str:
         return self.__transaction_type
 
     @property
@@ -55,8 +54,8 @@ class AccountDeposit:
     def to_json(self) -> dict:
         """Returns a JSON-serializable dictionary of the deposit"""
         return {
-            "alg": self.__algorithm,
-            "type": self.__transaction_type,
+            "alg": self.algorithm,
+            "type": self.transaction_type,
             "to_iban": self.__to_iban,
             "deposit_amount": self.__deposit_amount,
             "deposit_date": self.__deposit_date,
