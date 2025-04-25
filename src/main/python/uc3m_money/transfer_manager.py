@@ -10,8 +10,6 @@ from uc3m_money.utils import append_record, validate_iban, load_json_or_empty
 
 class TransferManager(metaclass=SingletonMeta):
     """Class for managing transfer operations"""
-    def __init__(self):
-        pass
 
     def validate_concept(self, concept: str):
         """Validates the concept string for correct format and length."""
@@ -45,7 +43,7 @@ class TransferManager(metaclass=SingletonMeta):
             raise AccountManagementException("Invalid transfer amount")
         return amount
 
-    def validate_transfer_parameters(self, concept, transfer_type, date, amount):
+    def validate_transfer_parameters(self, concept: str, transfer_type: str, date: str, amount: float) -> float:
         """Validates transfer concept, type, date, and amount."""
         self.validate_concept(concept)
         if not re.fullmatch(r"(ORDINARY|INMEDIATE|URGENT)", transfer_type):
@@ -54,7 +52,7 @@ class TransferManager(metaclass=SingletonMeta):
         validated_amount = self._validate_transfer_amount(amount)
         return validated_amount
 
-    def is_duplicate_transfer(self, transfer_list, request):
+    def is_duplicate_transfer(self, transfer_list: list, request: TransferRequest) -> bool:
         """Check if the transfer is already in the list."""
         for existing in transfer_list:
             if (existing["from_iban"] == request.from_iban and
