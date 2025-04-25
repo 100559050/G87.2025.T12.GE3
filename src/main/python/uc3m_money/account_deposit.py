@@ -22,6 +22,7 @@ class AccountDeposit:
 
     @property
     def transaction_type(self) -> str:
+        """Returns the type of transaction."""
         return self.__transaction_type
 
     @property
