@@ -1,4 +1,4 @@
-"""Exception for the order_management module"""
+"""Exception for the account_manager module"""
 
 class AccountManagementException(Exception):
     """Personalised exception for Accounts Management"""

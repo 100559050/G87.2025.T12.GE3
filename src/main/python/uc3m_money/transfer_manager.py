@@ -20,9 +20,9 @@ class TransferManager(metaclass=SingletonMeta):
             raise AccountManagementException("Invalid concept format")
 
     def validate_transfer_date(self, date_str):
-        """Validates the arrival date format using regex."""
-        iban_pattern = re.compile(r"^(([0-2]\d|3[0-1])\/(0\d|1[0-2])\/\d\d\d\d)$")
-        if not iban_pattern.fullmatch(date_str):
+        """Validates that the transfer date has a correct format and is not in the past"""
+        date_pattern = re.compile(r"^(([0-2]\d|3[0-1])\/(0\d|1[0-2])\/\d\d\d\d)$")
+        if not date_pattern.fullmatch(date_str):
             raise AccountManagementException("Invalid date format")
         try:
             transfer_date = datetime.strptime(date_str, "%d/%m/%Y").date()
@@ -34,12 +34,7 @@ class TransferManager(metaclass=SingletonMeta):
             raise AccountManagementException("Invalid date format")
         return date_str
 
-    def validate_transfer_details(self, concept, transfer_type, date, amount):
-        """Validates transfer concept, type, date, and amount."""
-        self.validate_concept(concept)
-        if not re.fullmatch(r"(ORDINARY|INMEDIATE|URGENT)", transfer_type):
-            raise AccountManagementException("Invalid transfer type")
-        self.validate_transfer_date(date)
+    def _validate_transfer_amount(self, amount) -> float:
         try:
             amount = float(amount)
         except ValueError as exc:
@@ -48,6 +43,15 @@ class TransferManager(metaclass=SingletonMeta):
             raise AccountManagementException("Invalid transfer amount")
         if amount < 10 or amount > 10000:
             raise AccountManagementException("Invalid transfer amount")
+        return amount
+
+    def validate_transfer_parameters(self, concept, transfer_type, date, amount):
+        """Validates transfer concept, type, date, and amount."""
+        self.validate_concept(concept)
+        if not re.fullmatch(r"(ORDINARY|INMEDIATE|URGENT)", transfer_type):
+            raise AccountManagementException("Invalid transfer type")
+        self.validate_transfer_date(date)
+        self._validate_transfer_amount(amount)
         return amount
 
     def is_duplicate_transfer(self, transfer_list, request):
@@ -71,7 +75,7 @@ class TransferManager(metaclass=SingletonMeta):
         """Creates and stores a transfer request."""
         validate_iban(from_iban)
         validate_iban(to_iban)
-        validated_amount = self.validate_transfer_details(concept, transfer_type, date, amount)
+        validated_amount = self.validate_transfer_parameters(concept, transfer_type, date, amount)
 
         transfer = TransferRequest(
             from_iban=from_iban,

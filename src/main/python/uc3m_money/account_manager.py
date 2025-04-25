@@ -24,7 +24,6 @@ class AccountManager(metaclass=SingletonMeta):
                          transfer_type: str,
                          date: str,
                          amount: float) -> str:
-        """Delegates transfer request to TransferManager."""
         return self._transfer.create_transfer(
             from_iban=from_iban,
             to_iban=to_iban,
@@ -52,11 +51,10 @@ class AccountManager(metaclass=SingletonMeta):
 
         return deposit_iban, deposit_amount_float
 
-    def _create_deposit(self, iban: str, amount: float) -> AccountDeposit:
-        """Create an AccountDeposit object with validated data."""
+    def build_deposit_object(self, iban: str, amount: float) -> AccountDeposit:
         return AccountDeposit(to_iban=iban, deposit_amount=amount)
 
-    def _persist_deposit(self, deposit_obj: AccountDeposit) -> str:
+    def _save_deposit_record(self, deposit_obj: AccountDeposit) -> str:
         """Persist the deposit and return its signature."""
         append_record(DEPOSITS_STORE_FILE, deposit_obj.to_json())
         return deposit_obj.deposit_signature
@@ -65,8 +63,8 @@ class AccountManager(metaclass=SingletonMeta):
         """Manages deposits received for accounts."""
         deposit_data = load_json_strict(file_path)
         deposit_iban, deposit_amount = self._validate_deposit_payload(deposit_data)
-        deposit_obj = self._create_deposit(deposit_iban, deposit_amount)
-        return self._persist_deposit(deposit_obj)
+        deposit_obj = self.build_deposit_object(deposit_iban, deposit_amount)
+        return self._save_deposit_record(deposit_obj)
 
     def _load_transactions(self) -> list:
         """Load transactions from file, ensuring file exists."""
@@ -88,7 +86,7 @@ class AccountManager(metaclass=SingletonMeta):
 
         return balance
 
-    def _persist_balance(self, iban: str, balance: float) -> None:
+    def _save_balance_record(self, iban: str, balance: float) -> None:
         """Save the calculated balance to the balances file."""
         last_balance = {
             "IBAN": iban,
@@ -102,5 +100,5 @@ class AccountManager(metaclass=SingletonMeta):
         iban = validate_iban(iban)
         transactions = self._load_transactions()
         balance = self._calculate_iban_balance(iban, transactions)
-        self._persist_balance(iban, balance)
+        self._save_balance_record(iban, balance)
         return True
