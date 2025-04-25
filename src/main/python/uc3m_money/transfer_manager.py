@@ -43,10 +43,12 @@ class TransferManager(metaclass=SingletonMeta):
             raise AccountManagementException("Invalid transfer amount")
         return amount
 
-    def validate_transfer_parameters(self, concept: str, transfer_type: str, date: str, amount: float) -> float:
+    def validate_transfer_parameters(self, concept: str, transfer_type: str,
+                                   date: str, amount: float) -> float:
         """Validates transfer concept, type, date, and amount."""
         self.validate_concept(concept)
-        if not re.fullmatch(r"(ORDINARY|INMEDIATE|URGENT)", transfer_type):
+        if not re.fullmatch(r"(ORDINARY|INMEDIATE|URGENT)",
+                           transfer_type):
             raise AccountManagementException("Invalid transfer type")
         self.validate_transfer_date(date)
         validated_amount = self._validate_transfer_amount(amount)
@@ -55,14 +57,18 @@ class TransferManager(metaclass=SingletonMeta):
     def is_duplicate_transfer(self, transfer_list: list, request: TransferRequest) -> bool:
         """Check if the transfer is already in the list."""
         for existing in transfer_list:
-            if (existing["from_iban"] == request.from_iban and
+            if self._is_matching_transfer(existing, request):
+                return True
+        return False
+
+    def _is_matching_transfer(self, existing: dict, request: TransferRequest) -> bool:
+        """Compare transfer details to check for duplicates."""
+        return (existing["from_iban"] == request.from_iban and
                 existing["to_iban"] == request.to_iban and
                 existing["transfer_date"] == request.transfer_date and
                 existing["transfer_amount"] == request.transfer_amount and
                 existing["transfer_concept"] == request.transfer_concept and
-                existing["transfer_type"] == request.transfer_type):
-                return True
-        return False
+                existing["transfer_type"] == request.transfer_type)
 
     def create_transfer(self, from_iban: str,
                        to_iban: str,
