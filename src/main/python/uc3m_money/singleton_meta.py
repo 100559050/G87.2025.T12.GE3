@@ -1,3 +1,5 @@
+"""Module providing a metaclass for implementing the Singleton pattern."""
+
 class SingletonMeta(type):
     """
     A Singleton metaclass to ensure only one instance is created.
