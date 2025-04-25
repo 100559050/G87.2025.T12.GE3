@@ -51,8 +51,8 @@ class TransferManager(metaclass=SingletonMeta):
         if not re.fullmatch(r"(ORDINARY|INMEDIATE|URGENT)", transfer_type):
             raise AccountManagementException("Invalid transfer type")
         self.validate_transfer_date(date)
-        self._validate_transfer_amount(amount)
-        return amount
+        validated_amount = self._validate_transfer_amount(amount)
+        return validated_amount
 
     def is_duplicate_transfer(self, transfer_list, request):
         """Check if the transfer is already in the list."""
