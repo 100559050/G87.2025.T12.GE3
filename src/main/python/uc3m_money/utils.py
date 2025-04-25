@@ -4,7 +4,6 @@ import re
 import json
 from uc3m_money.account_management_exception import AccountManagementException
 
-
 def load_json_or_empty(file_path: str) -> list:
     """Load JSON list from file or return empty list if missing."""
     try:
@@ -23,8 +22,6 @@ def write_json(file_path: str, data) -> None:
             json.dump(data, file, indent=2)
     except FileNotFoundError as ex:
         raise AccountManagementException("Wrong file or file path") from ex
-    except json.JSONDecodeError as ex:
-        raise AccountManagementException("JSON Decode Error - Wrong JSON Format") from ex
 
 
 def append_record(file_path: str, record) -> None:

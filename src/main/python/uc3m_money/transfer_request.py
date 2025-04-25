@@ -3,7 +3,6 @@ import hashlib
 import json
 from datetime import datetime, timezone
 
-
 class TransferRequest:
     """
     Represents a request to transfer money between two IBAN accounts.
