@@ -1,59 +1,17 @@
 """Transfer manager module"""
 import re
-import json
 from datetime import datetime, timezone
 from uc3m_money.account_management_exception import AccountManagementException
 from uc3m_money.account_management_config import TRANSFERS_STORE_FILE
 from uc3m_money.transfer_request import TransferRequest
 from uc3m_money.singleton_meta import SingletonMeta
+from uc3m_money.utils import append_record, validate_iban, load_json_or_empty
 
 
 class TransferManager(metaclass=SingletonMeta):
     """Class for managing transfer operations"""
     def __init__(self):
         pass
-
-    def load_json_or_empty(self, file_path: str):
-        """Load JSON list from file or return empty list if missing."""
-        try:
-            with open(file_path, "r", encoding="utf-8", newline="") as file:
-                return json.load(file)
-        except FileNotFoundError:
-            return []
-        except json.JSONDecodeError as ex:
-            raise AccountManagementException("JSON Decode Error - Wrong JSON Format") from ex
-
-    def append_record(self, file_path: str, record):
-        """Append a record to a JSON list in file."""
-        records = self.load_json_or_empty(file_path)
-        records.append(record)
-        try:
-            with open(file_path, "w", encoding="utf-8", newline="") as file:
-                json.dump(records, file, indent=2)
-        except FileNotFoundError as ex:
-            raise AccountManagementException("Wrong file or file path") from ex
-        except json.JSONDecodeError as ex:
-            raise AccountManagementException("JSON Decode Error - Wrong JSON Format") from ex
-
-    @staticmethod
-    def validate_iban(iban_str: str):
-        """Validates the control digit of a Spanish IBAN."""
-        iban_pattern = re.compile(r"^ES[0-9]{22}")
-        result_expression = iban_pattern.fullmatch(iban_str)
-        if not result_expression:
-            raise AccountManagementException("Invalid IBAN format")
-        iban = iban_str
-        original_code = iban[2:4]
-        iban = iban[:2] + "00" + iban[4:]
-        iban = iban[4:] + iban[:4]
-        for char, value in zip("ABCDEFGHIJKLMNOPQRSTUVWXYZ", range(10, 36)):
-            iban = iban.replace(char, str(value))
-        numeric_iban = int(iban)
-        remainder = numeric_iban % 97
-        computed_dc = 98 - remainder
-        if int(original_code) != computed_dc:
-            raise AccountManagementException("Invalid IBAN control digit")
-        return iban_str
 
     def validate_concept(self, concept: str):
         """Validates the concept string for correct format and length."""
@@ -111,8 +69,8 @@ class TransferManager(metaclass=SingletonMeta):
                        date: str,
                        amount: float) -> str:
         """Creates and stores a transfer request."""
-        self.validate_iban(from_iban)
-        self.validate_iban(to_iban)
+        validate_iban(from_iban)
+        validate_iban(to_iban)
         validated_amount = self.validate_transfer_details(concept, transfer_type, date, amount)
 
         transfer = TransferRequest(
@@ -124,9 +82,9 @@ class TransferManager(metaclass=SingletonMeta):
             transfer_amount=validated_amount
         )
 
-        transfer_list = self.load_json_or_empty(TRANSFERS_STORE_FILE)
+        transfer_list = load_json_or_empty(TRANSFERS_STORE_FILE)
         if self.is_duplicate_transfer(transfer_list, transfer):
             raise AccountManagementException("Duplicated transfer in transfer list")
-        self.append_record(TRANSFERS_STORE_FILE, transfer.to_json())
+        append_record(TRANSFERS_STORE_FILE, transfer.to_json())
 
         return transfer.transfer_code
