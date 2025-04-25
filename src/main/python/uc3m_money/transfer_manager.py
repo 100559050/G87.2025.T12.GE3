@@ -7,7 +7,6 @@ from uc3m_money.transfer_request import TransferRequest
 from uc3m_money.singleton_meta import SingletonMeta
 from uc3m_money.utils import append_record, validate_iban, load_json_or_empty
 
-
 class TransferManager(metaclass=SingletonMeta):
     """Class for managing transfer operations"""
 
