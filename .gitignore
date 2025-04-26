@@ -2,8 +2,3 @@ venv*
 .venv*
 .idea
 .pybuilder
-target
-!/target/reports/G8X.2025.TYY.GE2_coverage_html/G8X.2025.TYY.GE2_coverage.xml
-!/target/reports/G8X.2025.TYY.GE2_coverage_html/TEST-test_calculate_balance_tests.TestCalculateBalance-20250425220319.xml
-!/target/reports/G8X.2025.TYY.GE2_coverage_html/TEST-test_deposit_tests.TestDepositIntoAccountTests-20250425220319.xml
-!/target/reports/G8X.2025.TYY.GE2_coverage_html/TEST-test_transfer_request_tests.TestTransferRequestTest-20250425220319.xml
